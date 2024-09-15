@@ -1,4 +1,6 @@
 // bun.d.ts
+
+// This is so that TypeScript doesn not complain
 declare module "bun:sqlite" {
   export class Database {
     constructor(filename: string);
@@ -7,8 +9,11 @@ declare module "bun:sqlite" {
   }
 }
 
+// This is for type safety when using env variables
 declare module "bun" {
   interface Env {
     PORT: number;
+    PAT: string;
+    THE_SECRET: string;
   }
 }

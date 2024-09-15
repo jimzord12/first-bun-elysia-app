@@ -1,15 +1,15 @@
-import { Database } from "bun:sqlite";
 import type { SurveyResponse } from "../types";
+import { db } from "./migration";
 
-const db = new Database("mydb.sqlite");
-
-// Insert a new response
 const addResponse = (newResponse: SurveyResponse) => {
+  const propNamesOnly = Object.keys(newResponse);
+  const propValuesOnly = Object.values(newResponse);
+
   db.run(
-    "INSERT INTO surveyResults (responseId, fieldName, fieldValue) VALUES (?, ?, ?)",
-    newResponse.responseId,
-    newResponse.fieldName,
-    newResponse.fieldValue
+    `INSERT INTO surveyResults (${propNamesOnly.join(
+      ", "
+    )}) VALUES (${propNamesOnly.map(() => "?").join(", ")})`,
+    ...propValuesOnly
   );
 };
 

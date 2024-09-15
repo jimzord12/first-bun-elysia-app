@@ -1,25 +1,42 @@
 import { Elysia } from "elysia";
-import { db, addResponse, getAllResponses } from "./sqlite";
+import { bearer } from "@elysiajs/bearer";
+import { addResponse, getAllResponses } from "./sqlite";
 import { surveyResponseSchema } from "./types";
 
-// Create a new table
-db.run(
-  "CREATE TABLE IF NOT EXISTS surveyResults (id INTEGER PRIMARY KEY AUTOINCREMENT, responseId TEXT, fieldName TEXT, fieldValue TEXT)"
-);
-
-// This has a type error
 new Elysia()
+  .use(bearer())
   .get("/", () => {
     console.log("A GET Request was received: PATH='/'");
     return "Bun's Elysia JS Frameworks is working correctly 👌";
   })
+  .onBeforeHandle(({ bearer, set, error }) => {
+    console.log("Checking for the Bearer Token...");
+    if (!bearer) {
+      console.log("[ERROR]: Incoming Request did not have a Bearer Token.");
+      set.headers[
+        "WWW-Authenticate"
+      ] = `Bearer realm='sign', error="invalid_request"`;
 
-  //
+      return error(400, "Bearer Token is required");
+    }
+
+    if (bearer !== process.env.THE_SECRET) {
+      console.log("[ERROR]: Incoming Request's Bearer Token was not Valid.");
+
+      set.headers[
+        "WWW-Authenticate"
+      ] = `Bearer realm='sign', error="invalid_token"`;
+
+      return error(400, "The provided Bearer Token is not valid");
+    }
+
+    console.log("Validation of Bearer Token: SUCCESS");
+  })
   .group("/google-forms", (instance) =>
     instance
       .get("/", () => {
         console.log("A GET Request was received: PATH='google-forms/'");
-        return "Sending Data...";
+        return getAllResponses();
       })
       .post(
         "/",
@@ -34,11 +51,9 @@ new Elysia()
             return error(400, "All fields are required");
           }
 
-          // If validation passes, proceed with your logic
-
           addResponse({ responseId, fieldName, fieldValue });
-
           set.status = "Created";
+
           return {
             status: "success",
             data: { responseId, fieldName, fieldValue },
